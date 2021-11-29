@@ -1,3 +1,3 @@
 # K-onfig
 
-Various configuration used by me
+Various configuration files/settings used by me
