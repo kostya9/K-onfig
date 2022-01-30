@@ -69,7 +69,7 @@ public static class PowershellSetup
         var fontDownloadUrl = "https://github.com/ryanoasis/nerd-fonts/releases/download/v2.1.0/CascadiaCode.zip?WT.mc_id=-blog-scottha";
         var fontArchiveName = "fonts.zip";
 
-        string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(tempDirectory);
         Console.WriteLine($"Unzipping fonts to {tempDirectory}...");
 
@@ -122,16 +122,16 @@ public static class PowershellSetup
         }
     }
 
-    private async static Task UnzipFile(string directory, string extractionTargetFolder, string fileName)
+    private static async Task UnzipFile(string directory, string extractionTargetFolder, string fileName)
     {
-        using var zipFile = File.Open(Path.Combine(directory, fileName), FileMode.Open);
-        using var zip = new ZipInputStream(zipFile);
+        await using var zipFile = File.Open(Path.Combine(directory, fileName), FileMode.Open);
+        await using var zip = new ZipInputStream(zipFile);
 
         ZipEntry theEntry;
         while ((theEntry = zip.GetNextEntry()) != null)
         {
-            string innerDirectoryName = Path.Combine(extractionTargetFolder, Path.GetDirectoryName(theEntry.Name));
-            string innerFileName = Path.GetFileName(theEntry.Name);
+            var innerDirectoryName = Path.Combine(extractionTargetFolder, Path.GetDirectoryName(theEntry.Name));
+            var innerFileName = Path.GetFileName(theEntry.Name);
 
             // create directory
             if (innerDirectoryName.Length > 0)
@@ -139,25 +139,10 @@ public static class PowershellSetup
                 Directory.CreateDirectory(innerDirectoryName);
             }
 
-            if (innerFileName != string.Empty) 
+            if (innerFileName != string.Empty)
             {
-                using (FileStream streamWriter = File.Create(Path.Combine(innerDirectoryName, theEntry.Name)))
-                {
-                    int size = 2048;
-                    byte[] data = new byte[2048];
-                    while (true)
-                    {
-                        size = await zip.ReadAsync(data, 0, data.Length);
-                        if (size > 0)
-                        {
-                            streamWriter.Write(data, 0, size);
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                }
+                await using var streamWriter = File.Create(Path.Combine(innerDirectoryName, theEntry.Name));
+                await zip.CopyToAsync(streamWriter);
             }
         }
     }
@@ -165,17 +150,16 @@ public static class PowershellSetup
     private static HttpClient _client = new();
     private static async Task DownloadToDirectory(string downloadUrl, string downloadTargetPath, string fileName)
     {
-        using var stream = await _client.GetStreamAsync(downloadUrl);
+        await using var stream = await _client.GetStreamAsync(downloadUrl);
+        
+        await using var file = File.Create(Path.Combine(downloadTargetPath, fileName));
 
-
-        using var file = File.Create(Path.Combine(downloadTargetPath, fileName));
-
-        stream.CopyTo(file);
+        await stream.CopyToAsync(file);
     }
 
     private static async Task InstallWindowsTerminal()
     {
-        var packageId = "terminal";
+        const string packageId = "terminal";
 
         Console.WriteLine("Checking if Windows Terminal is installed...");
 
@@ -194,7 +178,7 @@ public static class PowershellSetup
 
     private static async Task InstallPowershell()
     {
-        var packageId = "Microsoft.PowerShell";
+        const string packageId = "Microsoft.PowerShell";
 
         Console.WriteLine("Checking if Powershell is installed...");
 
@@ -232,7 +216,6 @@ public static class PowershellSetup
         foreach(var file in new DirectoryInfo(sourceDir).EnumerateFiles())
         {
             var fileNameWithExtension = file.Name;
-            var profileParentDirectory = file.DirectoryName;
 
             if (!Directory.Exists(targetDir))
             {
@@ -240,7 +223,7 @@ public static class PowershellSetup
             }
 
             var copyTarget = Path.Combine(targetDir, fileNameWithExtension);
-            var copied = file.CopyTo(copyTarget, true);
+            file.CopyTo(copyTarget, true);
 
             Console.WriteLine($"Copying {file.FullName} to {copyTarget}");
         }
