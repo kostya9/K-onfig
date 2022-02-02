@@ -27,7 +27,11 @@ public static class PowershellSetup
         var settingsPath = $"{userProfileDirectory}\\AppData\\Local\\Packages\\Microsoft.WindowsTerminal_8wekyb3d8bbwe\\LocalState\\settings.json";
 
         var settingsJson = await File.ReadAllTextAsync(settingsPath);
-        var newJsonNode = JsonNode.Parse(settingsJson);
+        var newJsonNode = JsonNode.Parse(settingsJson, documentOptions: new System.Text.Json.JsonDocumentOptions
+        {
+            CommentHandling = System.Text.Json.JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        });
         var oldJson = newJsonNode.ToString();
 
         var profiles = newJsonNode["profiles"]["list"] as JsonArray;
